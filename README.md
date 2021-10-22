@@ -52,10 +52,3 @@ docker run \
 ## To Build
 
 docker build -t mikeburgh/subway:latest .
-
-## To run
-
-docker run \
- -v /var/run/docker.sock:/var/run/docker.sock \
- -v '/mnt/user/appdata/subway/data':'/data':'rw' \
- mikeburgh/subway:latest
