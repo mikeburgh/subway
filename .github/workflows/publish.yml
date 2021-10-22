@@ -23,7 +23,7 @@ jobs:
               uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
               with:
                   # github.repository as <account>/<repo>
-                  images: ${{ env.REGISTRY }}/${{ github.repository }}
+                  images: mikeburgh/subway
                   tags: |
                       type=ref,event=branch
                       type=ref,event=pr
