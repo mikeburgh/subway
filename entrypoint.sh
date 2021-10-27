@@ -14,16 +14,29 @@ then
 	mkdir /root/.cloudflared
 	cp /data/cert.perm /root/.cloudflared/cert.pem 
 else
-	echo "Loging into cloudflared"
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Loging into cloudflared"
 	./cloudflared login
 	cp /root/.cloudflared/cert.pem /data/cert.perm
 fi 
 
-echo "Creating tunnel"
+echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Creating tunnel"
 #specify the cred path here!
 ./cloudflared --cred-file /data/subway.json tunnel create subway || true
 
-echo "Fetching existing containers for host records... $(date)"
+#Any external services ?
+if [[ $EXTERNAL_SERVICES ]]
+then
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Setting up extra services supplied via enviroment variable EXTERNAL_SERVICES:"
+	echo $EXTERNAL_SERVICES
+
+	#Loop objects, adding dns to the tunnel
+	echo $EXTERNAL_SERVICES | jq -c -r '.[].hostname' | while read exhostname; do
+		./cloudflared --overwrite-dns tunnel route dns subway $exhostname || true
+	done
+
+	#write them into the config file!
+	yq e -i ".ingress += $EXTERNAL_SERVICES" config.yml
+fi
 
 ##call this like action=start|stop id=containerID checkContainer
 #Get the container config, and if we have labels for subway, then manage our config file
@@ -36,7 +49,7 @@ checkContainer() {
 	read hostname name network labels< <(echo $(echo ${inspect} | jq --raw-output '.[0] | .Name as $name | .NetworkSettings as $network | .Config.Labels | . as $labels | to_entries[] | select(.key == "subway.hostname") | "\(.value) \($name) \($network) \($labels)"'))
 	if [[ $hostname ]] 
 	then
-		echo "Container ${name:1} found with status ${action} and subway.hostname ${hostname}..."
+		echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Container ${name:1} found with status ${action} and subway.hostname ${hostname}..."
 
 		#if we are stopping we can just check if it exists and delete it if it does!
 		if [ $action = "stop" ]
@@ -128,17 +141,19 @@ startCloudflared() {
 	#append a 404 service on the end!
 	yq e  -i '.ingress += [{"service": "http_status:404"}]' config.yml
 
-	echo "Starting cloudflared with config:"
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Starting cloudflared with config:"
 	yq e 'del(.credentials-file)' config.yml
 	./cloudflared tunnel --config config.yml run subway &
     newPid=$!
 	if [ $pid != 0 ]
 	then
-		echo "Stopping old cloudflared.."
+		echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Stopping old cloudflared.."
 		kill $pid
 	fi
 	pid=$newPid
 }
+
+echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Checking existing containers..."
 
 #Get all currently running container IDs
 docker ps -q | while read line ; do
@@ -150,7 +165,7 @@ done
 #start cloudflared
 startCloudflared
 
-echo "Watching for container events... $(date)"
+echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Watching for container events... $(date)"
 docker events --filter 'event=start' --filter 'event=stop' --format '{{json .}}' | while read event
 do
 
