@@ -1,45 +1,48 @@
 #!/bin/bash
 
-#store our pid for cloudflared
-pid=0
 
-#write our empty ingress into the file, along with the path to the creds
-echo "credentials-file: /data/subway.json
-ingress:" > config.yml
 
-#figure out if /data/cert.perm exists or not, if not run login and copy it!
-if [[ -f /data/cert.perm ]]
+
+#lower case it!
+SERVICES="${SERVICES,,}"
+
+#figure out our services (default if not set is just cloudflare!)
+if [[ $SERVICES == "caddy" || $SERVICES == "both" ]]
 then
-	#copy it to where cloudflare expects it
-	mkdir /root/.cloudflared
-	cp /data/cert.perm /root/.cloudflared/cert.pem 
-else
-	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Loging into cloudflared"
-	./cloudflared login
-	cp /root/.cloudflared/cert.pem /data/cert.perm
-fi 
-
-echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Creating tunnel"
-#specify the cred path here!
-./cloudflared --cred-file /data/subway.json tunnel create subway || true
-
-#Any external services ?
-if [[ $EXTERNAL_SERVICES ]]
-then
-	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Setting up extra services supplied via enviroment variable EXTERNAL_SERVICES:"
-	echo $EXTERNAL_SERVICES
-
-	#Loop objects, adding dns to the tunnel
-	echo $EXTERNAL_SERVICES | jq -c -r '.[].hostname' | while read exhostname; do
-		./cloudflared --overwrite-dns tunnel route dns subway $exhostname || true
-	done
-
-	#write them into the config file!
-	yq e -i ".ingress += $EXTERNAL_SERVICES" config.yml
+	caddy=1
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY setting up service: caddy"
+	. ./scripts/caddy.sh
 fi
 
+if [[ $SERVICES == "cloudflare" || $SERVICES == "both"  || -z "$SERVICES" ]]
+then
+	cloudflare=1
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY setting up service: cloudflare"
+	. ./scripts/cloudflare.sh
+fi
+
+##call this like hostname=test.example.com service=10.0.0.x:80 addContainer
+#will add the container the appropriate service
+addContainer() { 
+	[[ -n $cloudflare ]] && hostname=$hostname service=$service cloudflaredAddContainer
+	[[ -n $caddy ]] && hostname=$hostname service=$service caddyAddContainer
+}
+
+##call this like hostname=test.example.com removeContainer
+#will add the container from the appropriate service
+removeContainer() {
+	[[ -n $cloudflare ]] && hostname=$hostname cloudflaredRemoveContainer
+	[[ -n $caddy ]] && hostname=$hostname service=$service caddyRemoveContainer
+}
+
+#will start/restart our services on initial load and on changes being detected!
+restartServices() { 
+	[[ -n $cloudflare ]] && cloudflaredRestart
+	[[ -n $caddy ]] && caddyRestart
+}
+
 ##call this like action=start|stop id=containerID checkContainer
-#Get the container config, and if we have labels for subway, then manage our config file
+#Get the container config, and if we have labels for subway
 checkContainer() { 
 
 	#fetch docker config in json
@@ -54,9 +57,7 @@ checkContainer() {
 		#if we are stopping we can just check if it exists and delete it if it does!
 		if [ $action = "stop" ]
 		then
-			#delete the hostname if it exists from our file (ignores it if it does not)
-			yq e -i "del(.ingress[] | select(.hostname == \"$hostname\"))" config.yml
-			#todo - Sort out deleting dns records!
+			hostname=$hostname removeContainer
 			return 1
 		fi
 
@@ -119,38 +120,14 @@ checkContainer() {
 		#if we connected, we can then setup a tunnel for it, so add it to the hostnames!
 		if [[ -v "service" ]]
 		then
-			echo " - Adding ${hostname} to tunnel via service ${service}"
-			#update our ingress for the container!
-			yq e -i ".ingress += [{\"hostname\": \"$hostname\",\"service\": \"$service\"}]" config.yml
-			./cloudflared --overwrite-dns tunnel route dns subway $hostname || true
+			hostname=$hostname service=$service addContainer
 			return 1
 		else
-			echo " - Failed to connect, not adding to tunnel"
+			echo " - Failed to connect, ignoring"
 		fi
 	fi
 
 	return 0
-}
-
-#Start cloudflared, and kill the previous one if exists!
-startCloudflared() { 
-
-	#delete our serivce 404 (if we added a new service it gets added to the end, so 404 status is above it)
-	yq e -i 'del(.ingress[] | select(.service == "http_status:404"))' config.yml
-
-	#append a 404 service on the end!
-	yq e  -i '.ingress += [{"service": "http_status:404"}]' config.yml
-
-	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Starting cloudflared with config:"
-	yq e 'del(.credentials-file)' config.yml
-	./cloudflared tunnel --config config.yml run subway &
-    newPid=$!
-	if [ $pid != 0 ]
-	then
-		echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Stopping old cloudflared.."
-		kill $pid
-	fi
-	pid=$newPid
 }
 
 echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Checking existing containers..."
@@ -162,8 +139,10 @@ docker ps -q | while read line ; do
     action="start" id=$line checkContainer
 done
 
-#start cloudflared
-startCloudflared
+
+
+#Restart them as we have changed now
+restartServices
 
 echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Watching for container events... $(date)"
 docker events --filter 'event=start' --filter 'event=stop' --format '{{json .}}' | while read event
@@ -180,7 +159,7 @@ do
 	#if we had a change made, restarted cloudflared
 	if [[ $valResult -eq 1 ]]
 	then
-		startCloudflared
+		restartServices
 	fi
 
 done

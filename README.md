@@ -1,20 +1,36 @@
 # Subway
 
-Automatically create [Cloudflare Tunnels](https://www.cloudflare.com/products/tunnel/) for Docker containers.
+Automatically create [Cloudflare Tunnels](https://www.cloudflare.com/products/tunnel/) and/or Caddy Reverse proxy (for local access) for Docker containers.
 
 Inspired by: https://github.com/aschzero/hera
 
 ## How It Works
 
-Subway connects to the Docker daemon, and if a container with a subway.hostname label is running, started or stopped the tunnel and associated DNS will be updated automatically.
+Subway connects to the Docker daemon, and if a container with a subway.hostname label is running, started or stopped then subway will update the cloudflared tunnel or caddy configuration accordingly.
 
+It can use either cloudflare tunnels or caddy to expose the containers or both pending on the use case.
+
+### Cloudflare Service
 It will create a tunnel called Subway, and for hostnames specified in the label subway.hostname it will create a DNS mapping in the cloudflare DNS to the tunnel UUID.
+
+### Caddy Service
+It will create a reverse proxy configuration in caddy for local network access with optional SSL certificate via DNS
 
 ## Current Status
 
 It works, but it's rough (it's a bash script!), I built it for personal use, your mileage may vary.
 
-## Using
+## Configuration
+
+| Enviroment Variables | Function | DEFAULT |
+| :---- | --- | --- |
+| `SERVICES` | 'cloudflare' or 'caddy' or 'both' If both then caddy and cloudflare will be configured | cloudflare 
+| `CADDY_ACME_DNS` | To use DNS rather than the built in caddy HTTP for the SSL challenge. The dns provider and token to use for Caddy [acme_dns](https://caddyserver.com/docs/caddyfile/options#acme-dns). Only cloudflare dns is supported for now, and format is 'cloudflare token' where token is the [auth token](#cloudflare-auth-token) |  
+| `CADDY_WILDCARD_DOMAIN` | To use a wild card domain set this to the domain, eg *.example.com Note: must also set CADDY_ACME_DNS to use wildcard domains for SSL |  
+| `EXTERNAL_SERVICES` | See [external services](#external-services) |  |
+
+
+## Using with just cloudflare
 
 1. Start Subway:
 
@@ -29,6 +45,31 @@ docker run \
 2. On first run check the docker logs for the authorization url, and copy it to a browser to complete authorization.
 
 3. Assign subway.hostname and subway.port labels to containers you want to access via the tunnel and then restart them for Subway to notice the change.
+
+## Using with just caddy
+
+1. Start Subway:
+
+```bash
+docker run \
+	--name=Subway
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	-v '/path/to/data':'/data':'rw' \
+	-e SERVICES=caddy \
+	-e CADDY_ACME_DNS="cloudflare token" \
+	mikeburgh/subway:latest
+```
+
+2. (optional, only required for dns SSL challenge when sites are not accessable over the internet). To get the value for the token and replace it in the variable above go to https://dash.cloudflare.com/profile/api-tokens and create a custom token with the following settings  
+Permissions:
+	- Zone - DNS - Edit
+
+	Zone Resources:
+	-  Include - Specific Zone - the zone you are using
+
+
+3. Assign subway.hostname and subway.port labels to containers you want to access via the tunnel and then restart them for Subway to notice the change.
+
 
 ## External Services
 
@@ -66,7 +107,7 @@ docker run \
 
 -   Docker.sock is required so it can watch for changes
 -   Data volume is required to persist authorization
--   The domain you select to authorize is the only one you can use in the label.hostnames.
+-   The domain you select to authorize is the only one you can use in the label subway.hostname.
 -   The subway container must be able to communicate with the containers with subway labels, you may need to create a dedicated network for subway and bridge it place Subway and other containers in it.
 
 ## Todo
@@ -75,8 +116,10 @@ docker run \
 -   Delete dns records of stopped containers (may require functionality from Cloudflare)
 -   Better handle if tunnel name exists
 -   Expose tunnel name as a docker ENV
+- 	Add networks other containers are on automatically to get access
 -   Support private network routing
--   Restart cloudflared if it stops
+- 	Option to configure container for either cloudflare or caddy if both are used
+- 	Support EXTERNAL_SERVICES in caddy
 -   Support multiple domains (may require multiple tunnels)
 
 ## To Build
