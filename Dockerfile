@@ -37,14 +37,14 @@ RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/c
 RUN ["chmod", "+x", "/cloudflared"]
 
 RUN mkdir /data; \ 
-	mkdir /scripts
+	mkdir /services
 
 
 #where caddy stores it's data 
 ENV XDG_DATA_HOME /data
 
 COPY entrypoint.sh /
-COPY scripts/* /scripts/
+COPY services/* /services/
 RUN ["chmod", "+x", "/entrypoint.sh"]
 
 

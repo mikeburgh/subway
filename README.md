@@ -6,7 +6,9 @@ Inspired by: https://github.com/aschzero/hera
 
 ## How It Works
 
-Subway connects to the Docker daemon, and if a container with a subway.hostname label is running, started or stopped then subway will update the cloudflared tunnel or caddy configuration accordingly.
+Subway connects to the Docker daemon, and if a container with a `subway.hostname` label is running, started or stopped then subway will update the cloudflared tunnel or caddy configuration accordingly.
+
+Optionally, specify `subway.port` for the port to proxy, if the container only exposes one port this is not required.
 
 It can use either cloudflare tunnels or caddy to expose the containers or both pending on the use case.
 
@@ -24,9 +26,10 @@ It works, but it's rough (it's a bash script!), I built it for personal use, you
 
 | Enviroment Variables | Function | DEFAULT |
 | :---- | --- | --- |
-| `SERVICES` | 'cloudflare' or 'caddy' or 'both' If both then caddy and cloudflare will be configured | cloudflare 
+| `SERVICES` | One or more services to enable separated by a comma, eg: 'cloudflare' or 'caddy' or 'cloudflare,caddy' | cloudflare 
 | `CADDY_ACME_DNS` | To use DNS rather than the built in caddy HTTP for the SSL challenge. The dns provider and token to use for Caddy [acme_dns](https://caddyserver.com/docs/caddyfile/options#acme-dns). Only cloudflare dns is supported for now, and format is 'cloudflare token' where token is the [auth token](#cloudflare-auth-token) |  
 | `CADDY_WILDCARD_DOMAIN` | To use a wild card domain set this to the domain, eg *.example.com Note: must also set CADDY_ACME_DNS to use wildcard domains for SSL |  
+| `CONNECT_NETWORKS` | Automatically connect Subway to networks the container maybe on to try and reach the services. Set to true to enable. Note requires read/write access to the docker.sock |  
 | `EXTERNAL_SERVICES` | See [external services](#external-services) |  |
 
 
@@ -44,7 +47,7 @@ docker run \
 
 2. On first run check the docker logs for the authorization url, and copy it to a browser to complete authorization.
 
-3. Assign subway.hostname and subway.port labels to containers you want to access via the tunnel and then restart them for Subway to notice the change.
+3. Assign subway.hostname and subway.port (optional, only required if multiple ports exposed on container) labels to containers you want to access via the tunnel and then restart them for Subway to notice the change.
 
 ## Using with just caddy
 
@@ -68,7 +71,7 @@ Permissions:
 	-  Include - Specific Zone - the zone you are using
 
 
-3. Assign subway.hostname and subway.port labels to containers you want to access via the tunnel and then restart them for Subway to notice the change.
+3. Assign subway.hostname and subway.port (optional, only required if multiple ports exposed on container) labels to containers you want to access via caddy and the reverse proxy and then restart them for Subway to notice the change.
 
 
 ## External Services
@@ -116,7 +119,6 @@ docker run \
 -   Delete dns records of stopped containers (may require functionality from Cloudflare)
 -   Better handle if tunnel name exists
 -   Expose tunnel name as a docker ENV
-- 	Add networks other containers are on automatically to get access
 -   Support private network routing
 - 	Option to configure container for either cloudflare or caddy if both are used
 - 	Support EXTERNAL_SERVICES in caddy
