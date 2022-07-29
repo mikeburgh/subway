@@ -1,6 +1,6 @@
 # Subway
 
-Automatically create [Cloudflare Tunnels](https://www.cloudflare.com/products/tunnel/) and/or Caddy Reverse proxy (for local access) for Docker containers.
+Automatically create [Cloudflare Tunnels](https://www.cloudflare.com/products/tunnel/) and/or [Caddy](https://caddyserver.com/) as a reverse proxy for local access for Docker containers.
 
 Inspired by: https://github.com/aschzero/hera
 
@@ -29,7 +29,7 @@ It works, but it's rough (it's a bash script!), I built it for personal use, you
 | `SERVICES` | One or more services to enable separated by a comma, eg: 'cloudflare' or 'caddy' or 'cloudflare,caddy' | cloudflare 
 | `CADDY_ACME_DNS` | To use DNS rather than the built in caddy HTTP for the SSL challenge. The dns provider and token to use for Caddy [acme_dns](https://caddyserver.com/docs/caddyfile/options#acme-dns). Only cloudflare dns is supported for now, and format is 'cloudflare token' where token is the [auth token](#cloudflare-auth-token) |  
 | `CADDY_WILDCARD_DOMAIN` | To use a wild card domain set this to the domain, eg *.example.com Note: must also set CADDY_ACME_DNS to use wildcard domains for SSL |  
-| `CONNECT_NETWORKS` | Automatically connect Subway to networks the container maybe on to try and reach the services. Set to true to enable. Note requires read/write access to the docker.sock |  
+| `CONNECT_NETWORKS` | Automatically connect Subway to networks the container is on to try and reach the services. Will only connect the network if initial attempt to connect to the container service fails. Set to true to enable. Note requires read/write access to the docker.sock |  
 | `EXTERNAL_SERVICES` | See [external services](#external-services) |  |
 
 
