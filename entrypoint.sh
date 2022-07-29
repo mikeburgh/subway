@@ -109,9 +109,6 @@ checkContainer() {
 
 				#try again
 				network=$network checkContainerAccess
-				echo "after re try"
-				echo $service 
-				
 			fi
 		fi
 
