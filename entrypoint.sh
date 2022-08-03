@@ -89,14 +89,15 @@ checkContainer() {
 				echo " - subway.port not specified, using single port container exposes: ${port}"
 			else	
 				echo " - subway.port not specified, multiple ports exposed on container, specify the port using the label subway.port, ignorning"
+				return 0
 			fi
 		else
 			echo " - subway.port specified: ${port}"
 		fi
 
+		service="" #set up our scopped variable!
 		if [[ $port != '' ]]
 		then
-			service="" #set up our scopped variable!
 			network=$network checkContainerAccess
 			if [[ $service == "" && $CONNECT_NETWORKS ]]
 			then
