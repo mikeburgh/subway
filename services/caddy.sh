@@ -25,11 +25,8 @@ then
 	echo "$CADDY_WILDCARD_DOMAIN {
     
 }" >> Caddyfile
-
 fi
 
-echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Starting Caddy"
-caddy start
 
 caddyRemoveContainer() { 
 	#deletes the lines relating to the hostname from our file!
@@ -68,3 +65,21 @@ caddyAddContainer() {
 caddyRestart() {
 	caddy reload
 }
+
+#process external services
+if [[ $EXTERNAL_SERVICES ]]
+then
+	echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Setting up external services supplied via enviroment variable EXTERNAL_SERVICES in caddy:"
+	echo $EXTERNAL_SERVICES
+
+	#Loop and add them as containers!
+	while read -r hostname; do
+		read -r service
+
+		hostname=$hostname service=$service caddyAddContainer
+		
+	done< <(echo ${EXTERNAL_SERVICES} | jq --raw-output '.[] | (.hostname, .service)' )
+fi
+
+echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Starting Caddy"
+caddy start

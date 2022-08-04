@@ -121,7 +121,7 @@ docker run \
 -   Expose tunnel name as a docker ENV
 -   Support private network routing
 - 	Option to configure container for either cloudflare or caddy if both are used
-- 	Support EXTERNAL_SERVICES in caddy
+- 	Centralize EXTERNAL_SERVICES code out of service specific flies
 -   Support multiple domains (may require multiple tunnels)
 
 ## To Build
