@@ -50,7 +50,7 @@ checkContainer() {
 	inspect=`docker inspect $id`
 
 	#get the hostname and config from our labels from the container!
-	read hostname name network ports labels< <(echo $(echo ${inspect} | jq --raw-output '.[0] | .Name as $name | .NetworkSettings as $network | .Config.ExposedPorts as $ports | .Config.Labels | . as $labels | to_entries[] | select(.key == "subway.hostname") | "\(.value) \($name) \($network) \($ports) \($labels)"'))
+	read hostname name network ports labels< <(echo $(echo ${inspect} | jq --raw-output '.[0] | .Name as $name | .NetworkSettings as $network | .Config.ExposedPorts as $ports | .Config.Labels | . as $labels | to_entries[] | select(.key == "subway.hostname") | "\(.value) \($name) \($network) \($ports) \($labels)"') | sed -r 's/\\"/\\\\"/g')
 	if [[ $hostname ]] 
 	then
 		echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Container ${name:1} found with status ${action} and subway.hostname ${hostname}..."

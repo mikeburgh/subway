@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION=1.17
+ARG GOLANG_VERSION=1.19
 ARG ALPINE_VERSION=3.15
 
 #Use a builder to build caddy with the DNS plugin
@@ -11,11 +11,9 @@ WORKDIR /go/src/github.com/caddyserver/xcaddy/cmd/xcaddy
 RUN apk add --no-cache git gcc build-base; \
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest;
 
-#this last with can probably be removed, it's temp due to an ambigous import!
 RUN  xcaddy build \
 	 --output /go/src/github.com/caddyserver/xcaddy/cmd/caddy \
-	 --with github.com/caddy-dns/cloudflare \
-	 --with github.com/antlr/antlr4=github.com/antlr/antlr4/runtime/Go/antlr@v0.0.0-20220209173558-ad29539cd2e9 
+	 --with github.com/caddy-dns/cloudflare
 
 #Final Image
 FROM alpine:${ALPINE_VERSION}
