@@ -3,6 +3,12 @@
 
 #get our container ID, used if we add this container to networks to try and connect to labeled containers
 containerID=$(basename $(cat /proc/1/cpuset))
+if [ $containerID = "/" ]
+then
+	containerID=$(cat /etc/hostname)
+fi
+
+echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') SUBWAY Container ID ${containerID}"
 
 #lower case it!
 SERVICES="${SERVICES,,}"
@@ -105,6 +111,7 @@ checkContainer() {
 				echo " - Failed to connect, connecting to container networks and trying again"
 
 				while read -r netID; do
+					echo " - Connecting to network ${netID}"
 					docker network connect $netID $containerID
 				done< <(echo ${network} | jq --raw-output '.Networks | .[].NetworkID' )
 

@@ -111,7 +111,7 @@ docker run \
 -   Docker.sock is required so it can watch for changes
 -   Data volume is required to persist authorization
 -   The domain you select to authorize is the only one you can use in the label subway.hostname.
--   The subway container must be able to communicate with the containers with subway labels, you may need to create a dedicated network for subway and bridge it place Subway and other containers in it.
+-   The subway container must be able to communicate with the containers with subway labels, see the enviroment variable CONNECT_NETWORKS for allowing subway to connect to networks of other containers.
 
 ## Todo
 
