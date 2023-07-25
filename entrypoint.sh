@@ -143,7 +143,7 @@ checkContainerAccess() {
 
 		#loop and sleep to see if it comes up, important since the container could have just started so services might not be ready in time!
 		counter=0
-		while [  $counter -lt 3  ]; do
+		while [  $counter -lt 10  ]; do
 			#check and wait 2 seconds for a response, store response or error
 			result=`nc -zvw2 ${ip} ${port} 2>&1`
 			
@@ -162,8 +162,8 @@ checkContainerAccess() {
 		#echo our last result, it will be success or fail!
 		echo " ${result}"
 		
-		#if counter is not 3, we found it!
-		if [ $counter != 3 ]
+		#if counter is not 10, we found it!
+		if [ $counter != 10 ]
 		then
 			#todo fix this to figure out http or https properly!
 			service="http://${ip}:${port}"

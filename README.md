@@ -19,7 +19,6 @@ It will create a tunnel called Subway, and for hostnames specified in the label 
 It will create a reverse proxy configuration in caddy for local network access with optional SSL certificate via DNS
 
 ## Current Status
-
 It works, but it's rough (it's a bash script!), I built it for personal use, your mileage may vary.
 
 ## Configuration
